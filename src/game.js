@@ -4,10 +4,15 @@
   const CONFIG = Object.freeze({
     canvas: { width: 720, height: 960 },
     round: { targetScore: 500, outsToEnd: 3, startingBalls: 10 },
+    BATTING_ORDER_SIZE: 3,
+    battingOrder: { firstSlot: 1, defaultCardIds: ["leadoff", "connector", "slugger"] },
     scoring: {
       base: { OUT: 0, SINGLE: 10, DOUBLE: 25, TRIPLE: 50, HR: 100 },
       runScore: 75,
       defaultMultiplier: 1,
+      bases: { OUT: 0, SINGLE: 1, DOUBLE: 2, TRIPLE: 3, HR: 4 },
+      scoringBaseIndex: 3,
+      leadoffSingleBonus: 20,
       sluggerHrMultiplier: 3,
     },
     input: {
@@ -32,7 +37,7 @@
       holeY: 770,
       holeRadius: 38,
     },
-    ui: { padding: 24, cardWidth: 132, cardHeight: 176, headerHeight: 172, titleY: 44, scoreY: 82, statusY: 116, messageY: 150, cardY: 184, cardTitleY: 82, cardEffectY: 112, footerY: 910, diamondX: 566, diamondY: 114, diamondStep: 26, baseSize: 20 },
+    ui: { padding: 24, cardWidth: 132, cardHeight: 176, headerHeight: 172, titleY: 44, scoreY: 82, statusY: 116, messageY: 150, cardY: 184, cardTitleY: 82, cardEffectY: 112, orderX: 568, orderY: 206, orderLineHeight: 25, footerY: 910, diamondX: 566, diamondY: 114, diamondStep: 26, baseSize: 20 },
     assets: { cards: "/assets/cards/", monsters: "/assets/monsters/", extension: ".png" },
     colors: {
       grass: "#1f6f3f", dirt: "#b77937", chalk: "#f8fafc", gold: "#fbbf24", red: "#ef4444", blue: "#38bdf8",
@@ -42,7 +47,35 @@
 
   const RESULT_ORDER = Object.freeze(["OUT", "SINGLE", "DOUBLE", "TRIPLE", "HR"]);
   const CARD_DEFINITIONS = Object.freeze({
-    slugger: { id: "slugger", name: "Slugger", asset: "cards.slugger_fire_global_passive", modifies: "HR", multiplier: CONFIG.scoring.sluggerHrMultiplier },
+    leadoff: {
+      id: "leadoff",
+      name: "Leadoff",
+      effectText: `SINGLE +${CONFIG.scoring.leadoffSingleBonus}`,
+      asset: "cards.batter_contact_slot_bonus",
+      apply(context) {
+        if (context?.finalResult === "SINGLE") context.hitScore += CONFIG.scoring.leadoffSingleBonus;
+      },
+    },
+    connector: {
+      id: "connector",
+      name: "Connector",
+      effectText: "Runner on: DOUBLE→TRIPLE",
+      asset: "cards.batter_runner_slot_upgrade",
+      apply(context) {
+        const runnersBefore = context?.runnersBefore || {};
+        const hasRunner = Boolean(runnersBefore.first || runnersBefore.second || runnersBefore.third);
+        if (hasRunner && context?.finalResult === "DOUBLE") context.finalResult = "TRIPLE";
+      },
+    },
+    slugger: {
+      id: "slugger",
+      name: "Slugger",
+      effectText: `HR x${CONFIG.scoring.sluggerHrMultiplier}`,
+      asset: "cards.batter_power_slot_multiply",
+      apply(context) {
+        if (context?.finalResult === "HR") context.multiplier *= CONFIG.scoring.sluggerHrMultiplier;
+      },
+    },
   });
 
   const canvas = document.getElementById("gameCanvas");
@@ -51,8 +84,6 @@
   const directionInput = document.getElementById("directionInput");
   const hitButton = document.getElementById("hitButton");
   const restartButton = document.getElementById("restartButton");
-  const imageCache = new Map();
-
   const gameState = {
     phase: "start",
     score: 0,
@@ -62,7 +93,9 @@
     runners: { first: false, second: false, third: false },
     activeBall: null,
     resultMessage: "Set power and direction, then hit the ball.",
-    cards: [{ ...CARD_DEFINITIONS.slugger }],
+    battingOrder: [],
+    currentBatterIndex: 0,
+    imageCache: new Map(),
   };
 
   const holes = RESULT_ORDER.map((result, index) => {
@@ -77,13 +110,13 @@
   });
 
   function createImage(key) {
-    if (imageCache.has(key)) return imageCache.get(key);
+    if (gameState.imageCache?.has(key)) return gameState.imageCache.get(key);
     const [category, ...nameParts] = String(key || "").split(".");
     const base = CONFIG.assets[category];
     if (!base || nameParts.length === 0) return null;
     const image = new Image();
     image.src = `${base}${nameParts.join("_")}${CONFIG.assets.extension}`;
-    imageCache.set(key, image);
+    gameState.imageCache?.set(key, image);
     return image;
   }
 
@@ -101,7 +134,66 @@
     gameState.runners = { first: false, second: false, third: false };
     gameState.activeBall = null;
     gameState.resultMessage = "Set power and direction, then hit the ball.";
-    gameState.cards = [{ ...CARD_DEFINITIONS.slugger }];
+    gameState.battingOrder = createDefaultBattingOrder();
+    gameState.currentBatterIndex = 0;
+  }
+
+  function createDefaultBattingOrder() {
+    return (CONFIG.battingOrder.defaultCardIds || [])
+      .slice(0, CONFIG.BATTING_ORDER_SIZE)
+      .map((cardId, index) => ({ slot: CONFIG.battingOrder.firstSlot + index, cardId }));
+  }
+
+  function getActiveBattingSlot() {
+    const order = gameState.battingOrder || [];
+    const size = Math.min(CONFIG.BATTING_ORDER_SIZE, order.length);
+    if (size <= 0) return null;
+    const index = ((gameState.currentBatterIndex || 0) % size + size) % size;
+    return order[index] || null;
+  }
+
+  function getActiveCard() {
+    const cardId = getActiveBattingSlot()?.cardId;
+    return CARD_DEFINITIONS[cardId] || null;
+  }
+
+  function cloneRunners(runners) {
+    return { first: Boolean(runners?.first), second: Boolean(runners?.second), third: Boolean(runners?.third) };
+  }
+
+  function calculateResultState(result, runners, outs) {
+    const nextRunners = cloneRunners(runners);
+    let runs = 0;
+    let nextOuts = outs;
+    if (result === "OUT") nextOuts += 1;
+    else {
+      const bases = CONFIG.scoring.bases[result] || CONFIG.scoring.bases.OUT;
+      const occupied = [nextRunners.first, nextRunners.second, nextRunners.third];
+      const next = [false, false, false];
+      occupied.forEach((hasRunner, index) => {
+        if (!hasRunner) return;
+        const destination = index + bases;
+        if (destination >= CONFIG.scoring.scoringBaseIndex) runs += 1;
+        else next[destination] = true;
+      });
+      if (bases >= CONFIG.scoring.bases.HR) runs += 1;
+      else if (bases > 0) next[bases - 1] = true;
+      nextRunners.first = next[0];
+      nextRunners.second = next[1];
+      nextRunners.third = next[2];
+    }
+    return { runs, runnersAfter: nextRunners, outsAfter: nextOuts };
+  }
+
+  function applyBattingSlotModifiers(resultContext) {
+    const card = getActiveCard();
+    if (typeof card?.apply === "function") card.apply(resultContext);
+    return resultContext;
+  }
+
+  function advanceBattingOrder() {
+    const size = Math.max(CONFIG.BATTING_ORDER_SIZE, 1);
+    gameState.currentBatterIndex = ((gameState.currentBatterIndex || 0) + 1) % size;
   }
 
   function sliderNumber(input, fallback) {
@@ -122,35 +214,47 @@
     gameState.resultMessage = "Ball in play...";
   }
 
-  function applyCardModifiers(result, hitScore, runScore, multiplier) {
-    return (gameState.cards || []).reduce((current, card) => card?.modifies === result ? current * (card.multiplier || CONFIG.scoring.defaultMultiplier) : current, multiplier);
+  function createResultContext(originalResult) {
+    const safeResult = CONFIG.scoring.base[originalResult] === undefined ? "OUT" : originalResult;
+    const runnersBefore = cloneRunners(gameState.runners);
+    const outsBefore = gameState.outs || 0;
+    const initialState = calculateResultState(safeResult, runnersBefore, outsBefore);
+    return {
+      originalResult: safeResult,
+      finalResult: safeResult,
+      hitScore: CONFIG.scoring.base[safeResult],
+      runScore: initialState.runs * CONFIG.scoring.runScore,
+      multiplier: CONFIG.scoring.defaultMultiplier,
+      runnersBefore,
+      runnersAfter: initialState.runnersAfter,
+      outsBefore,
+      outsAfter: initialState.outsAfter,
+    };
+  }
+
+  function finalizeResultContext(context) {
+    const previousBaseScore = CONFIG.scoring.base[context.finalResult] ?? CONFIG.scoring.base.OUT;
+    const hitScoreModifier = context.hitScore - previousBaseScore;
+    const finalState = calculateResultState(context.finalResult, context.runnersBefore, context.outsBefore);
+    context.runnersAfter = finalState.runnersAfter;
+    context.outsAfter = finalState.outsAfter;
+    context.hitScore = (CONFIG.scoring.base[context.finalResult] ?? CONFIG.scoring.base.OUT) + hitScoreModifier;
+    context.runScore = finalState.runs * CONFIG.scoring.runScore;
+    return finalState.runs;
   }
 
   function applyResult(result) {
-    const safeResult = CONFIG.scoring.base[result] === undefined ? "OUT" : result;
-    let runs = 0;
-    if (safeResult === "OUT") gameState.outs += 1;
-    else {
-      const bases = { SINGLE: 1, DOUBLE: 2, TRIPLE: 3, HR: 4 }[safeResult] || 0;
-      const occupied = [gameState.runners.first, gameState.runners.second, gameState.runners.third];
-      const next = [false, false, false];
-      occupied.forEach((hasRunner, index) => {
-        if (!hasRunner) return;
-        const destination = index + bases;
-        if (destination >= 3) runs += 1;
-        else next[destination] = true;
-      });
-      if (bases >= 4) runs += 1;
-      else next[bases - 1] = true;
-      gameState.runners = { first: next[0], second: next[1], third: next[2] };
-    }
-    const hitScore = CONFIG.scoring.base[safeResult];
-    const runScore = runs * CONFIG.scoring.runScore;
-    const multiplier = applyCardModifiers(safeResult, hitScore, runScore, CONFIG.scoring.defaultMultiplier);
-    const gained = (hitScore + runScore) * multiplier;
+    const activeSlot = getActiveBattingSlot();
+    const activeCard = getActiveCard();
+    const resultContext = applyBattingSlotModifiers(createResultContext(result));
+    const runs = finalizeResultContext(resultContext);
+    const gained = (resultContext.hitScore + resultContext.runScore) * resultContext.multiplier;
     gameState.score += gained;
+    gameState.runners = cloneRunners(resultContext.runnersAfter);
+    gameState.outs = resultContext.outsAfter;
     gameState.activeBall = null;
-    gameState.resultMessage = `${safeResult}: +${gained} (${runs} run${runs === 1 ? "" : "s"}, x${multiplier})`;
+    gameState.resultMessage = `Slot ${activeSlot?.slot || "-"} ${activeCard?.name || "No Card"}: ${resultContext.finalResult} +${gained} (${runs} run${runs === 1 ? "" : "s"}, x${resultContext.multiplier})`;
+    advanceBattingOrder();
     if (gameState.score >= gameState.targetScore) gameState.phase = "gameover";
     else if (gameState.outs >= CONFIG.round.outsToEnd || gameState.ballsRemaining <= 0) gameState.phase = "gameover";
   }
@@ -203,11 +307,20 @@
     const ball = gameState.activeBall;
     if (ball) { ctx.beginPath(); ctx.fillStyle = "#ffffff"; ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = CONFIG.colors.red; ctx.stroke(); }
 
-    const card = gameState.cards?.[0];
+    const slot = getActiveBattingSlot();
+    const card = getActiveCard();
     if (card) {
       const x = CONFIG.ui.padding, y = CONFIG.ui.cardY, image = createImage(card.asset);
-      safeDrawImage(ctx, image, x, y, CONFIG.ui.cardWidth, CONFIG.ui.cardHeight, () => { ctx.fillStyle = CONFIG.colors.card; ctx.fillRect(x, y, CONFIG.ui.cardWidth, CONFIG.ui.cardHeight); drawText("SLUGGER", x + CONFIG.ui.cardWidth / 2, y + CONFIG.ui.cardTitleY, 18, CONFIG.colors.gold, "center"); drawText("HR x3", x + CONFIG.ui.cardWidth / 2, y + CONFIG.ui.cardEffectY, 20, CONFIG.colors.text, "center"); });
+      safeDrawImage(ctx, image, x, y, CONFIG.ui.cardWidth, CONFIG.ui.cardHeight, () => { ctx.fillStyle = CONFIG.colors.card; ctx.fillRect(x, y, CONFIG.ui.cardWidth, CONFIG.ui.cardHeight); drawText(`SLOT ${slot?.slot || "-"}`, x + CONFIG.ui.cardWidth / 2, y + CONFIG.ui.cardTitleY - CONFIG.ui.orderLineHeight, 15, CONFIG.colors.gold, "center"); drawText(card.name, x + CONFIG.ui.cardWidth / 2, y + CONFIG.ui.cardTitleY, 18, CONFIG.colors.gold, "center"); drawText(card.effectText, x + CONFIG.ui.cardWidth / 2, y + CONFIG.ui.cardEffectY, 14, CONFIG.colors.text, "center"); });
+      drawText(`Current Batter Slot ${slot?.slot || "-"}`, x, y + CONFIG.ui.cardHeight + CONFIG.ui.orderLineHeight, 18, CONFIG.colors.gold);
+      drawText(`${card.name}: ${card.effectText}`, x, y + CONFIG.ui.cardHeight + CONFIG.ui.orderLineHeight * 2, 16, CONFIG.colors.text);
     }
+    drawText("Batting Order", CONFIG.ui.orderX, CONFIG.ui.orderY, 18, CONFIG.colors.gold, "center");
+    (gameState.battingOrder || []).slice(0, CONFIG.BATTING_ORDER_SIZE).forEach((orderSlot, index) => {
+      const orderCard = CARD_DEFINITIONS[orderSlot?.cardId] || null;
+      const marker = index === (gameState.currentBatterIndex || 0) ? "▶" : " ";
+      drawText(`${marker} ${orderSlot?.slot || "-"}. ${orderCard?.name || "Empty"}`, CONFIG.ui.orderX, CONFIG.ui.orderY + CONFIG.ui.orderLineHeight * (index + 1), 16, index === (gameState.currentBatterIndex || 0) ? CONFIG.colors.blue : CONFIG.colors.text, "center");
+    });
     if (gameState.phase === "start") drawText("Ready: choose power and direction.", CONFIG.canvas.width / 2, CONFIG.ui.footerY, 24, CONFIG.colors.gold, "center");
     if (gameState.phase === "gameover") drawText(gameState.score >= gameState.targetScore ? "WIN - Target Reached!" : "GAME OVER", CONFIG.canvas.width / 2, CONFIG.ui.footerY, 32, gameState.score >= gameState.targetScore ? CONFIG.colors.gold : CONFIG.colors.red, "center");
   }
@@ -218,5 +331,5 @@
   hitButton?.addEventListener("click", hitBall);
   restartButton?.addEventListener("click", resetGame);
   resetGame(); loop();
-  window.BaseBallatro = { CONFIG, gameState, applyResult, applyCardModifiers, createImage };
+  window.BaseBallatro = { CONFIG, CARD_DEFINITIONS, gameState, applyResult, getActiveBattingSlot, getActiveCard, applyBattingSlotModifiers, advanceBattingOrder, createImage };
 })();
