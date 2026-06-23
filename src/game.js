@@ -19,12 +19,15 @@
       LATE: { min: -77, max: -48 },
     },
     WALL_BOUNDS: { left: 58, right: 662, top: 92, bottom: 875 },
-    RESULT_POCKETS: [
-      { id: "out-left", result: "OUT", x: 105, y: 792, radius: 36, label: "OUT", color: "#111827" },
-      { id: "single", result: "SINGLE", x: 230, y: 810, radius: 36, label: "1B", color: "#2563eb" },
-      { id: "double", result: "DOUBLE", x: 360, y: 825, radius: 36, label: "2B", color: "#7c3aed" },
-      { id: "triple", result: "TRIPLE", x: 490, y: 810, radius: 36, label: "3B", color: "#dc2626" },
-      { id: "hr", result: "HR", x: 615, y: 792, radius: 36, label: "HR", color: "#f59e0b" },
+    RESULT_ZONES: [
+      { id: "out-left", result: "OUT", shape: "circle", x: 118, y: 650, radius: 42, label: "OUT", color: "#111827" },
+      { id: "out-right", result: "OUT", shape: "circle", x: 602, y: 650, radius: 42, label: "OUT", color: "#111827" },
+      { id: "single-left", result: "SINGLE", shape: "circle", x: 235, y: 555, radius: 44, label: "1B", color: "#2563eb" },
+      { id: "single-right", result: "SINGLE", shape: "circle", x: 485, y: 555, radius: 44, label: "1B", color: "#2563eb" },
+      { id: "double-left", result: "DOUBLE", shape: "circle", x: 185, y: 375, radius: 46, label: "2B", color: "#7c3aed" },
+      { id: "double-right", result: "DOUBLE", shape: "circle", x: 535, y: 375, radius: 46, label: "2B", color: "#7c3aed" },
+      { id: "triple-center", result: "TRIPLE", shape: "circle", x: 360, y: 270, radius: 48, label: "3B", color: "#dc2626" },
+      { id: "hr-wall", result: "HR", shape: "rect", x: 270, y: 98, width: 180, height: 42, label: "HR", color: "#f59e0b" },
     ],
     SCORING_VALUES: { OUT: 0, SINGLE: 10, DOUBLE: 25, TRIPLE: 50, HR: 100 },
     RUN_SCORE: 75,
@@ -38,30 +41,35 @@
     HIT_FRICTION: 0.995,
     HIT_MAX_SPEED: 28,
     WALL_BOUNCE: 0.82,
-    PEG_RADIUS: 13,
+    PEG_RADIUS: 14,
     PEG_BOUNCE: 0.92,
-    PEGS: [
-      { x: 130, y: 250 }, { x: 222, y: 250 }, { x: 314, y: 250 }, { x: 406, y: 250 }, { x: 498, y: 250 }, { x: 590, y: 250 },
-      { x: 176, y: 380 }, { x: 268, y: 380 }, { x: 360, y: 380 }, { x: 452, y: 380 }, { x: 544, y: 380 },
-      { x: 130, y: 510 }, { x: 222, y: 510 }, { x: 314, y: 510 }, { x: 406, y: 510 }, { x: 498, y: 510 }, { x: 590, y: 510 },
-      { x: 176, y: 640 }, { x: 268, y: 640 }, { x: 360, y: 640 }, { x: 452, y: 640 }, { x: 544, y: 640 },
+    BUMPERS: [
+      { x: 290, y: 675, label: "CUT" },
+      { x: 430, y: 675, label: "CUT" },
+      { x: 250, y: 455, label: "GAP" },
+      { x: 470, y: 455, label: "GAP" },
+      { x: 360, y: 405, label: "CF" },
+      { x: 330, y: 205, label: "WIND" },
+      { x: 390, y: 205, label: "WIND" },
     ],
     UI: {
       padding: 24, headerHeight: 172, titleY: 42, scoreY: 78, statusY: 110, messageY: 142,
       cardX: 24, cardY: 184, cardWidth: 132, cardHeight: 176, footerY: 918, instructionY: 888,
       diamondX: 566, diamondY: 112, diamondStep: 26, baseSize: 20, orderX: 570, orderY: 210, lineHeight: 25,
       moundRadius: 22, baseMarkerSize: 18, batterRadius: 13, pitcherRadius: 14, plateSize: 14, fenceLineWidth: 5,
+      zoneRectLabelSize: 20, zoneCircleLabelSize: 18, bumperLabelSize: 10, fieldTipSize: 17, fieldLabelSize: 16, foulLabelSize: 15,
     },
     FIELD_VISUALS: {
       outfieldArcRadius: 670, outfieldArcStart: 1.15, outfieldArcEnd: 1.85, fullCircleRadians: 2,
       firstBase: { x: 500, y: 705 }, secondBase: { x: 360, y: 575 }, thirdBase: { x: 220, y: 705 },
       batterBoxLeftXOffset: -42, batterBoxRightXOffset: 14, batterBoxYOffset: -18, batterBoxWidth: 28, batterBoxHeight: 58,
       pitcherMarkerYOffset: -45, batterMarkerXOffset: 62, batterMarkerYOffset: -5, pocketLabelYOffset: 6,
+      fieldTipX: 360, fieldTipY: 190, foulLabelY: 690, outfieldLabelY: 235, infieldLabelY: 745,
       cardTitleYOffset: 82, cardEffectYOffset: 114,
     },
     COLORS: {
       grass: "#1f6f3f", outfield: "#185f36", dirt: "#b77937", chalk: "#f8fafc", gold: "#fbbf24",
-      red: "#ef4444", blue: "#38bdf8", panel: "rgba(15, 23, 42, 0.86)", card: "#312e81",
+      fence: "#7f1d1d", warningTrack: "#92400e", red: "#ef4444", blue: "#38bdf8", panel: "rgba(15, 23, 42, 0.86)", card: "#312e81",
       text: "#f8fafc", muted: "#cbd5e1", shadow: "rgba(0, 0, 0, 0.28)", bat: "#f97316",
     },
     ASSETS: { cards: "/assets/cards/", monsters: "/assets/monsters/", extension: ".png" },
@@ -262,6 +270,14 @@
     }
   }
 
+  function isBallInResultZone(ball, zone) {
+    if (!ball || !zone) return false;
+    if (zone.shape === "rect") {
+      return ball.x + ball.radius >= zone.x && ball.x - ball.radius <= zone.x + zone.width && ball.y + ball.radius >= zone.y && ball.y - ball.radius <= zone.y + zone.height;
+    }
+    return Math.hypot(ball.x - zone.x, ball.y - zone.y) <= (zone.radius || 0) + ball.radius;
+  }
+
   function updateHitBall() {
     const ball = gameState.hitBall;
     if (!ball) return;
@@ -276,7 +292,7 @@
     const walls = CONFIG.WALL_BOUNDS;
     if (ball.x - ball.radius < walls.left || ball.x + ball.radius > walls.right) { ball.x = Math.max(walls.left + ball.radius, Math.min(walls.right - ball.radius, ball.x)); ball.vx *= -CONFIG.WALL_BOUNCE; }
     if (ball.y - ball.radius < walls.top) { ball.y = walls.top + ball.radius; ball.vy *= -CONFIG.WALL_BOUNCE; }
-    (CONFIG.PEGS || []).forEach((peg) => {
+    (CONFIG.BUMPERS || []).forEach((peg) => {
       const dx = ball.x - peg.x, dy = ball.y - peg.y, distance = Math.hypot(dx, dy), minimum = ball.radius + CONFIG.PEG_RADIUS;
       if (distance > 0 && distance < minimum) {
         const nx = dx / distance, ny = dy / distance, dot = ball.vx * nx + ball.vy * ny;
@@ -284,8 +300,8 @@
         ball.vx = (ball.vx - 2 * dot * nx) * CONFIG.PEG_BOUNCE; ball.vy = (ball.vy - 2 * dot * ny) * CONFIG.PEG_BOUNCE;
       }
     });
-    const pocket = (CONFIG.RESULT_POCKETS || []).find((target) => Math.hypot(ball.x - target.x, ball.y - target.y) <= target.radius);
-    if (pocket) resolveResult(pocket.result);
+    const zone = (CONFIG.RESULT_ZONES || []).find((target) => isBallInResultZone(ball, target));
+    if (zone) resolveResult(zone.result);
     else if (ball.y > CONFIG.WALL_BOUNDS.bottom || ball.framesAlive >= CONFIG.HIT_TIMEOUT_FRAMES) resolveResult("OUT");
   }
 
@@ -311,17 +327,47 @@
   function drawText(text, x, y, size, color = CONFIG.COLORS.text, align = "left") { if (!ctx) return; ctx.fillStyle = color; ctx.font = `800 ${size}px system-ui`; ctx.textAlign = align; ctx.fillText(String(text || ""), x, y); }
   function drawCircle(x, y, radius, color, stroke = CONFIG.COLORS.chalk) { ctx.beginPath(); ctx.fillStyle = color; ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); } }
 
+  function drawResultZones() {
+    (CONFIG.RESULT_ZONES || []).forEach((zone) => {
+      ctx.save();
+      ctx.fillStyle = zone.color;
+      ctx.strokeStyle = CONFIG.COLORS.chalk;
+      ctx.lineWidth = CONFIG.UI.fenceLineWidth / 2;
+      if (zone.shape === "rect") {
+        ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+        ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
+        drawText(zone.label, zone.x + zone.width / 2, zone.y + zone.height / 2 + CONFIG.FIELD_VISUALS.pocketLabelYOffset, CONFIG.UI.zoneRectLabelSize, CONFIG.COLORS.text, "center");
+      } else {
+        drawCircle(zone.x, zone.y, zone.radius, zone.color, CONFIG.COLORS.chalk);
+        drawText(zone.label, zone.x, zone.y + CONFIG.FIELD_VISUALS.pocketLabelYOffset, CONFIG.UI.zoneCircleLabelSize, CONFIG.COLORS.text, "center");
+      }
+      ctx.restore();
+    });
+  }
+
+  function drawBumpers() {
+    (CONFIG.BUMPERS || []).forEach((bumper) => {
+      drawCircle(bumper.x, bumper.y, CONFIG.PEG_RADIUS, CONFIG.COLORS.gold, CONFIG.COLORS.shadow);
+      drawText(bumper.label, bumper.x, bumper.y - CONFIG.PEG_RADIUS - CONFIG.FIELD_VISUALS.pocketLabelYOffset, CONFIG.UI.bumperLabelSize, CONFIG.COLORS.chalk, "center");
+    });
+  }
+
   function renderField() {
     ctx.fillStyle = CONFIG.COLORS.grass; ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
     ctx.fillStyle = CONFIG.COLORS.outfield; ctx.beginPath(); ctx.arc(CONFIG.HOME_PLATE.x, CONFIG.HOME_PLATE.y, CONFIG.FIELD_VISUALS.outfieldArcRadius, Math.PI * CONFIG.FIELD_VISUALS.outfieldArcStart, Math.PI * CONFIG.FIELD_VISUALS.outfieldArcEnd); ctx.lineTo(CONFIG.HOME_PLATE.x, CONFIG.HOME_PLATE.y); ctx.fill();
+    ctx.strokeStyle = CONFIG.COLORS.warningTrack; ctx.lineWidth = CONFIG.UI.fenceLineWidth * 2; ctx.beginPath(); ctx.arc(CONFIG.HOME_PLATE.x, CONFIG.HOME_PLATE.y, CONFIG.FIELD_VISUALS.outfieldArcRadius - CONFIG.UI.headerHeight, Math.PI * CONFIG.FIELD_VISUALS.outfieldArcStart, Math.PI * CONFIG.FIELD_VISUALS.outfieldArcEnd); ctx.stroke();
     ctx.fillStyle = CONFIG.COLORS.dirt; ctx.beginPath(); ctx.moveTo(CONFIG.HOME_PLATE.x, CONFIG.HOME_PLATE.y); ctx.lineTo(CONFIG.FIELD_VISUALS.firstBase.x, CONFIG.FIELD_VISUALS.firstBase.y); ctx.lineTo(CONFIG.FIELD_VISUALS.secondBase.x, CONFIG.FIELD_VISUALS.secondBase.y); ctx.lineTo(CONFIG.FIELD_VISUALS.thirdBase.x, CONFIG.FIELD_VISUALS.thirdBase.y); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = CONFIG.COLORS.chalk; ctx.lineWidth = CONFIG.UI.fenceLineWidth; ctx.strokeRect(CONFIG.WALL_BOUNDS.left, CONFIG.WALL_BOUNDS.top, CONFIG.WALL_BOUNDS.right - CONFIG.WALL_BOUNDS.left, CONFIG.WALL_BOUNDS.bottom - CONFIG.WALL_BOUNDS.top);
+    ctx.strokeStyle = CONFIG.COLORS.fence; ctx.lineWidth = CONFIG.UI.fenceLineWidth; ctx.strokeRect(CONFIG.WALL_BOUNDS.left, CONFIG.WALL_BOUNDS.top, CONFIG.WALL_BOUNDS.right - CONFIG.WALL_BOUNDS.left, CONFIG.WALL_BOUNDS.bottom - CONFIG.WALL_BOUNDS.top);
     ctx.beginPath(); ctx.moveTo(CONFIG.HOME_PLATE.x, CONFIG.HOME_PLATE.y); ctx.lineTo(CONFIG.WALL_BOUNDS.left, CONFIG.WALL_BOUNDS.top); ctx.moveTo(CONFIG.HOME_PLATE.x, CONFIG.HOME_PLATE.y); ctx.lineTo(CONFIG.WALL_BOUNDS.right, CONFIG.WALL_BOUNDS.top); ctx.stroke();
     drawCircle(CONFIG.PITCH_START.x, CONFIG.PITCH_START.y, CONFIG.UI.moundRadius, CONFIG.COLORS.dirt, CONFIG.COLORS.chalk);
     [CONFIG.FIELD_VISUALS.firstBase, CONFIG.FIELD_VISUALS.secondBase, CONFIG.FIELD_VISUALS.thirdBase, CONFIG.HOME_PLATE].forEach((base) => { ctx.save(); ctx.translate(base.x, base.y); ctx.rotate(Math.PI / 4); ctx.fillStyle = CONFIG.COLORS.chalk; ctx.fillRect(-CONFIG.UI.baseMarkerSize / 2, -CONFIG.UI.baseMarkerSize / 2, CONFIG.UI.baseMarkerSize, CONFIG.UI.baseMarkerSize); ctx.restore(); });
     ctx.strokeStyle = CONFIG.COLORS.chalk; ctx.strokeRect(CONFIG.HOME_PLATE.x + CONFIG.FIELD_VISUALS.batterBoxLeftXOffset, CONFIG.HOME_PLATE.y + CONFIG.FIELD_VISUALS.batterBoxYOffset, CONFIG.FIELD_VISUALS.batterBoxWidth, CONFIG.FIELD_VISUALS.batterBoxHeight); ctx.strokeRect(CONFIG.HOME_PLATE.x + CONFIG.FIELD_VISUALS.batterBoxRightXOffset, CONFIG.HOME_PLATE.y + CONFIG.FIELD_VISUALS.batterBoxYOffset, CONFIG.FIELD_VISUALS.batterBoxWidth, CONFIG.FIELD_VISUALS.batterBoxHeight);
-    (CONFIG.PEGS || []).forEach((peg) => drawCircle(peg.x, peg.y, CONFIG.PEG_RADIUS, CONFIG.COLORS.gold, CONFIG.COLORS.shadow));
-    (CONFIG.RESULT_POCKETS || []).forEach((pocket) => { drawCircle(pocket.x, pocket.y, pocket.radius, pocket.color, CONFIG.COLORS.chalk); drawText(pocket.label, pocket.x, pocket.y + CONFIG.FIELD_VISUALS.pocketLabelYOffset, 16, CONFIG.COLORS.text, "center"); });
+    drawText("Aim for the gaps. Deep hits score more.", CONFIG.FIELD_VISUALS.fieldTipX, CONFIG.FIELD_VISUALS.fieldTipY, CONFIG.UI.fieldTipSize, CONFIG.COLORS.chalk, "center");
+    drawText("OUT pockets", CONFIG.CANVAS_WIDTH / 2, CONFIG.FIELD_VISUALS.foulLabelY, CONFIG.UI.foulLabelSize, CONFIG.COLORS.muted, "center");
+    drawText("OUTFIELD", CONFIG.CANVAS_WIDTH / 2, CONFIG.FIELD_VISUALS.outfieldLabelY, CONFIG.UI.fieldLabelSize, CONFIG.COLORS.muted, "center");
+    drawText("INFIELD", CONFIG.CANVAS_WIDTH / 2, CONFIG.FIELD_VISUALS.infieldLabelY, CONFIG.UI.fieldLabelSize, CONFIG.COLORS.muted, "center");
+    drawResultZones();
+    drawBumpers();
     drawCircle(CONFIG.PITCH_START.x, CONFIG.PITCH_START.y + CONFIG.FIELD_VISUALS.pitcherMarkerYOffset, CONFIG.UI.pitcherRadius, CONFIG.COLORS.blue, CONFIG.COLORS.chalk);
     drawCircle(CONFIG.HOME_PLATE.x + CONFIG.FIELD_VISUALS.batterMarkerXOffset, CONFIG.HOME_PLATE.y + CONFIG.FIELD_VISUALS.batterMarkerYOffset, CONFIG.UI.batterRadius, CONFIG.COLORS.bat, CONFIG.COLORS.chalk);
   }
