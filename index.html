@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BaseBallatro MVP</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="game-panel" aria-label="BaseBallatro game">
+        <canvas id="gameCanvas" width="720" height="960" aria-label="BaseBallatro play field"></canvas>
+      </section>
+      <section class="controls" aria-label="Game controls">
+        <h1>BaseBallatro</h1>
+        <p class="tagline">A baseball pinball score-combo roguelike MVP.</p>
+        <label>
+          Power
+          <input id="powerInput" type="range" min="0" max="100" value="70" />
+        </label>
+        <label>
+          Direction
+          <input id="directionInput" type="range" min="0" max="100" value="50" />
+        </label>
+        <button id="hitButton" type="button">Hit Ball</button>
+        <button id="restartButton" type="button">Restart Run</button>
+        <p class="hint">Aim left/right, set power, then hit. Reach the target before 3 outs or before balls run out.</p>
+      </section>
+    </main>
+    <script src="src/game.js"></script>
+  </body>
+</html>
